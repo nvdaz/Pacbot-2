@@ -16,67 +16,74 @@ from terminalColors import *
 # Server messages
 from serverMessage import ServerMessage
 
+
 class GameModes(IntEnum):
 	'''
 	Enum of possible game modes
 	'''
 
-	PAUSED  = 0
+	PAUSED = 0
 	SCATTER = 1
-	CHASE   = 2
+	CHASE = 2
+
 
 # Terminal colors, based on the game mode
 GameModeColors = {
-	GameModes.PAUSED:  DIM,
-	GameModes.CHASE:   YELLOW,
-	GameModes.SCATTER: GREEN
+	GameModes.PAUSED: DIM,
+	GameModes.CHASE: YELLOW,
+	GameModes.SCATTER: GREEN,
 }
+
 
 class GhostColors(IntEnum):
 	'''
 	Enum of possible ghost names
 	'''
 
-	RED    = 0
-	PINK   = 1
-	CYAN   = 2
+	RED = 0
+	PINK = 1
+	CYAN = 2
 	ORANGE = 3
+
 
 # Scatter targets for each of the ghosts
 #               R   P   C   O
 SCATTER_ROW = [-3, -3, 31, 31]
-SCATTER_COL = [25,  2, 27,  0]
+SCATTER_COL = [25, 2, 27, 0]
+
 
 class Directions(IntEnum):
 	'''
 	Enum of possible directions for the Pacman agent
 	'''
 
-	UP    = 0
-	LEFT  = 1
-	DOWN  = 2
+	UP = 0
+	LEFT = 1
+	DOWN = 2
 	RIGHT = 3
-	NONE  = 4
+	NONE = 4
+
 
 # Directions:                 U     L     D     R  None
-D_ROW: list[int]        = [  -1,   -0,   +1,   +0,   +0]
-D_COL: list[int]        = [  -0,   -1,   +0,   +1,   +0]
+D_ROW: list[int] = [-1, -0, +1, +0, +0]
+D_COL: list[int] = [-0, -1, +0, +1, +0]
 D_MESSAGES: list[bytes] = [b'w', b'a', b's', b'd', b'.']
 
 reversedDirections: dict[Directions, Directions] = {
-	Directions.UP:    Directions.DOWN,
-	Directions.LEFT:  Directions.RIGHT,
-	Directions.DOWN:  Directions.UP,
+	Directions.UP: Directions.DOWN,
+	Directions.LEFT: Directions.RIGHT,
+	Directions.DOWN: Directions.UP,
 	Directions.RIGHT: Directions.LEFT,
-	Directions.NONE:  Directions.NONE
+	Directions.NONE: Directions.NONE,
 }
+
 
 class Location:
 	'''
 	Location of an entity in the game engine
 	'''
 
-	def __init__(self, state) -> None: # type: ignore
+	def __init__(self, state) -> None:  # type: ignore
 		'''
 		Construct a new location state object
 		'''
@@ -85,10 +92,10 @@ class Location:
 		self.state: GameState = state
 
 		# Row and column information
-		self.rowDir: int  = 0
-		self.row: int     = 32
-		self.colDir: int  = 0
-		self.col: int     = 32
+		self.rowDir: int = 0
+		self.row: int = 32
+		self.colDir: int = 0
+		self.col: int = 32
 
 	def update(self, loc_uint16: int) -> None:
 		'''
@@ -97,7 +104,7 @@ class Location:
 
 		# Get the row and column bytes
 		row_uint8: int = loc_uint16 >> 8
-		col_uint8: int = loc_uint16 & 0xff
+		col_uint8: int = loc_uint16 & 0xFF
 
 		# Get the row direction (2's complement of first 2 bits)
 		self.rowDir = row_uint8 >> 6
@@ -105,7 +112,7 @@ class Location:
 			self.rowDir -= 4
 
 		# Get the row value (last 6 bits)
-		self.row = row_uint8 & 0x3f
+		self.row = row_uint8 & 0x3F
 
 		# Get the col direction (2's complement of first 2 bits)
 		self.colDir = col_uint8 >> 6
@@ -113,7 +120,7 @@ class Location:
 			self.colDir -= 4
 
 		# Get the column value (last 6 bits)
-		self.col = col_uint8 & 0x3f
+		self.col = col_uint8 & 0x3F
 
 	def at(self, row: int, col: int) -> bool:
 		'''
@@ -133,10 +140,10 @@ class Location:
 		'''
 
 		# Serialize the row byte
-		row_uint8: int = (((self.rowDir & 0x03) << 6) | (self.row & 0x3f))
+		row_uint8: int = ((self.rowDir & 0x03) << 6) | (self.row & 0x3F)
 
 		# Serialize the column byte
-		col_uint8: int = (((self.colDir & 0x03) << 6) | (self.col & 0x3f))
+		col_uint8: int = ((self.colDir & 0x03) << 6) | (self.col & 0x3F)
 
 		# Return the full serialization
 		return (row_uint8 << 8) | (col_uint8)
@@ -181,12 +188,13 @@ class Location:
 		# Return none if no direction matches
 		return Directions.NONE
 
+
 class Ghost:
 	'''
 	Location and auxiliary info of a ghost in the game engine
 	'''
 
-	def __init__(self, color: GhostColors, state) -> None: # type: ignore
+	def __init__(self, color: GhostColors, state) -> None:  # type: ignore
 		'''
 		Construct a new ghost state object
 		'''
@@ -196,7 +204,7 @@ class Ghost:
 
 		# Ghost information
 		self.color: GhostColors = color
-		self.location: Location = Location(state) # type: ignore
+		self.location: Location = Location(state)  # type: ignore
 		self.frightSteps: int = 0
 		self.spawning: bool = bool(True)
 
@@ -208,7 +216,7 @@ class Ghost:
 		Update auxiliary info (fright steps and spawning flag, 1 byte)
 		'''
 
-		self.frightSteps = auxInfo & 0x3f
+		self.frightSteps = auxInfo & 0x3F
 		self.spawning = bool(auxInfo >> 7)
 
 	def serializeAux(self) -> int:
@@ -223,7 +231,7 @@ class Ghost:
 		Return whether this ghost is frightened
 		'''
 
-		return (self.frightSteps > 0)
+		return self.frightSteps > 0
 
 	def move(self) -> None:
 		'''
@@ -302,12 +310,19 @@ class Ghost:
 
 			# Orange targets Pacman, but only if Pacman is farther than 8 spaces away
 			elif self.color == GhostColors.ORANGE:
-				distSqToPacman = (nextRow - pacmanRow) * (nextRow - pacmanRow) + \
-													(nextCol - pacmanCol) * (nextCol - pacmanCol)
-				targetRow = pacmanRow if (distSqToPacman < 64) else \
-											SCATTER_ROW[GhostColors.ORANGE]
-				targetCol = pacmanCol if (distSqToPacman < 64) else \
-											SCATTER_COL[GhostColors.ORANGE]
+				distSqToPacman = (nextRow - pacmanRow) * (nextRow - pacmanRow) + (
+					nextCol - pacmanCol
+				) * (nextCol - pacmanCol)
+				targetRow = (
+					pacmanRow
+					if (distSqToPacman < 64)
+					else SCATTER_ROW[GhostColors.ORANGE]
+				)
+				targetCol = (
+					pacmanCol
+					if (distSqToPacman < 64)
+					else SCATTER_COL[GhostColors.ORANGE]
+				)
 
 		# In scatter mode, each ghost tracks a fixed target at a corner of the maze
 		if self.state.gameMode == GameModes.SCATTER:
@@ -315,16 +330,18 @@ class Ghost:
 			targetCol = SCATTER_COL[self.color]
 
 		# Calculate the distance squared to the target, for all 4 moves
-		minDist = 0xfffffff
+		minDist = 0xFFFFFFF
 		maxDist = -1
-		minDir  = Directions.UP
-		maxDir  = Directions.UP
+		minDir = Directions.UP
+		maxDir = Directions.UP
 		for direction in Directions:
 			if direction != Directions.NONE:
 
 				# Avoid reversals, as ghosts are not typically allowed to reverse
-				if D_ROW[direction] + self.location.rowDir != 0 or \
-					D_COL[direction] + self.location.colDir != 0:
+				if (
+					D_ROW[direction] + self.location.rowDir != 0
+					or D_COL[direction] + self.location.colDir != 0
+				):
 
 					# Check whether this new location would be valid (not in a wall)
 					newRow = nextRow + D_ROW[direction]
@@ -333,17 +350,19 @@ class Ghost:
 
 						# Compare the distance squared to the target to the current best;
 						# if it is better, choose it to be the new ghost plan
-						distSqToTarget = (newRow - targetRow) * (newRow - targetRow) + \
-															(newCol - targetCol) * (newCol - targetCol)
+						distSqToTarget = (newRow - targetRow) * (newRow - targetRow) + (
+							newCol - targetCol
+						) * (newCol - targetCol)
 						if distSqToTarget < minDist:
-							minDir  = direction
+							minDir = direction
 							minDist = distSqToTarget
 						elif distSqToTarget >= maxDist:
-							maxDir  = direction
+							maxDir = direction
 							maxDist = distSqToTarget
 
 		# Update the best direction to be the plan
 		self.plannedDirection = minDir if (not self.isFrightened()) else maxDir
+
 
 class GameStateCompressed:
 	'''
@@ -351,9 +370,7 @@ class GameStateCompressed:
 	'''
 
 	def __init__(
-		self,
-		serialized: bytes,
-		ghostPlans: dict[GhostColors, Directions]
+		self, serialized: bytes, ghostPlans: dict[GhostColors, Directions]
 	) -> None:
 		'''
 		Construct a new compressed game state object
@@ -364,6 +381,7 @@ class GameStateCompressed:
 
 		# Store tentative ghost plans
 		self.ghostPlans: dict[GhostColors, Directions] = ghostPlans
+
 
 class GameState:
 	'''
@@ -388,11 +406,14 @@ class GameState:
 		# Buffer of messages to write back to the server
 		self.writeServerBuf: deque[ServerMessage] = deque[ServerMessage](maxlen=64)
 
+		# Store whether the client has received an update since the last write
+		self.received_update: bool = False
+
 		# Internal representation of walls:
 		# 31 * 4 bytes = 31 * (32-bit integer bitset)
 		self.wallArr: list[int] = wallArr
 
-		#--- Important game state attributes (from game engine) ---#
+		# --- Important game state attributes (from game engine) ---#
 
 		# 2 bytes
 		self.currTicks: int = 0
@@ -442,7 +463,7 @@ class GameState:
 
 		# 31 * 4 bytes = 31 * (32-bit integer bitset)
 		self.pelletArr: list[int] = [0 for _ in range(31)]
-		self.format += (31 * 'I')
+		self.format += 31 * 'I'
 
 	def lock(self) -> None:
 		'''
@@ -491,10 +512,8 @@ class GameState:
 
 		# Return a serialization with the same format as server updates
 		return pack(
-
 			# Format string
 			self.format,
-
 			# General game info
 			self.currTicks,
 			self.updatePeriod,
@@ -504,33 +523,26 @@ class GameState:
 			self.currScore,
 			self.currLevel,
 			self.currLives,
-
 			# Red ghost info
 			self.ghosts[GhostColors.RED].location.serialize(),
 			self.ghosts[GhostColors.RED].serializeAux(),
-
 			# Pink ghost info
 			self.ghosts[GhostColors.PINK].location.serialize(),
 			self.ghosts[GhostColors.PINK].serializeAux(),
-
 			# Cyan ghost info
 			self.ghosts[GhostColors.CYAN].location.serialize(),
 			self.ghosts[GhostColors.CYAN].serializeAux(),
-
 			# Orange ghost info
 			self.ghosts[GhostColors.ORANGE].location.serialize(),
 			self.ghosts[GhostColors.ORANGE].serializeAux(),
-
 			# Pacman location info
 			self.pacmanLoc.serialize(),
-
 			# Fruit location info
 			self.fruitLoc.serialize(),
 			self.fruitSteps,
 			self.fruitDuration,
-
 			# Pellet info
-			*self.pelletArr
+			*self.pelletArr,
 		)
 
 	def getGhostPlans(self) -> dict[GhostColors, Directions]:
@@ -553,14 +565,14 @@ class GameState:
 		unpacked: tuple[int, ...] = unpack_from(self.format, serializedState, 0)
 
 		# General game info
-		self.currTicks    = unpacked[0]
+		self.currTicks = unpacked[0]
 		self.updatePeriod = unpacked[1]
-		self.gameMode     = GameModes(unpacked[2])
-		self.modeSteps    = unpacked[3]
+		self.gameMode = GameModes(unpacked[2])
+		self.modeSteps = unpacked[3]
 		self.modeDuration = unpacked[4]
-		self.currScore    = unpacked[5]
-		self.currLevel    = unpacked[6]
-		self.currLives    = unpacked[7]
+		self.currScore = unpacked[5]
+		self.currLevel = unpacked[6]
+		self.currLives = unpacked[7]
 
 		# Red ghost info
 		self.ghosts[GhostColors.RED].location.update(unpacked[8])
@@ -613,16 +625,22 @@ class GameState:
 		Helper function to check if a super pellet is at a given location
 		'''
 
-		return self.pelletAt(row, col) and \
-			((row == 3) or (row == 23)) and ((col == 1) or (col == 26))
+		return (
+			self.pelletAt(row, col)
+			and ((row == 3) or (row == 23))
+			and ((col == 1) or (col == 26))
+		)
 
 	def fruitAt(self, row: int, col: int) -> bool:
 		'''
 		Helper function to check if a fruit is at a given location
 		'''
 
-		return (self.fruitSteps > 0) and (row == self.fruitLoc.row) and \
-			(col == self.fruitLoc.col)
+		return (
+			(self.fruitSteps > 0)
+			and (row == self.fruitLoc.row)
+			and (col == self.fruitLoc.col)
+		)
 
 	def numPellets(self) -> int:
 		'''
@@ -665,10 +683,10 @@ class GameState:
 		superPellet: bool = self.superPelletAt(row, col)
 
 		# Remove the pellet at this location
-		self.pelletArr[row] &= (~(1 << col))
+		self.pelletArr[row] &= ~(1 << col)
 
 		# Increase the score by this amount
-		self.currScore += (50 if superPellet else 10)
+		self.currScore += 50 if superPellet else 10
 
 		# Spawn the fruit based on the number of pellets, if applicable
 		numPellets = self.numPellets()
@@ -706,8 +724,10 @@ class GameState:
 		'''
 
 		# Begin by outputting the tick number, colored based on the mode
-		out: str = f'{GameModeColors[self.gameMode]}-------'\
-				f' time = {self.currTicks:5d} -------\033[0m\n'
+		out: str = (
+			f'{GameModeColors[self.gameMode]}-------'
+			f' time = {self.currTicks:5d} -------\033[0m\n'
+		)
 
 		# Loop over all 31 rows
 		for row in range(31):
@@ -778,9 +798,9 @@ class GameState:
 		# Check for collisions
 		for ghost in self.ghosts:
 			if ghost.location.at(pacmanRow, pacmanCol):
-				if not ghost.isFrightened(): # Collision; Pacman loses
+				if not ghost.isFrightened():  # Collision; Pacman loses
 					return False
-				else: # 'Respawn' the ghost
+				else:  # 'Respawn' the ghost
 					ghost.location.row = 32
 					ghost.location.col = 32
 					ghost.spawning = True
@@ -794,9 +814,7 @@ class GameState:
 		given Pacbot direction and number of ticks until the message is sent.
 		'''
 
-		self.writeServerBuf.append(
-			ServerMessage(D_MESSAGES[pacmanDir], numTicks)
-		)
+		self.writeServerBuf.append(ServerMessage(D_MESSAGES[pacmanDir], numTicks))
 
 	def simulateAction(self, numTicks: int, pacmanDir: Directions) -> bool:
 		'''
@@ -814,7 +832,7 @@ class GameState:
 				ghost.guessPlan()
 
 		# Loop over every tick
-		for tick in range(1, numTicks+1):
+		for tick in range(1, numTicks + 1):
 
 			# Keep ticking until an update
 			if (self.currTicks + tick) % self.updatePeriod != 0:
@@ -848,7 +866,7 @@ class GameState:
 
 				# Reverse the planned directions of all ghosts
 				for ghost in self.ghosts:
-						ghost.plannedDirection = reversedDirections[ghost.plannedDirection]
+					ghost.plannedDirection = reversedDirections[ghost.plannedDirection]
 
 			# Guess the next ghost moves (will likely be inaccurate, due to inferring
 			# unknown information from other features of the game state)
@@ -879,12 +897,14 @@ class GameState:
 		# Return that Pacman was safe during this transition
 		return True
 
+
 def compressGameState(state: GameState) -> GameStateCompressed:
 	'''
 	Function to compress the game state into a smaller object, for easier storage
 	'''
 
 	return GameStateCompressed(state.serialize(), state.getGhostPlans())
+
 
 def decompressGameState(state: GameState, compressed: GameStateCompressed):
 	'''

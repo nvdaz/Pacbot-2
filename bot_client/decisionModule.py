@@ -1,8 +1,15 @@
 # Asyncio (for concurrency)
 import asyncio
+from stable_baselines3 import PPO
 
 # Game state
 from gameState import *
+from env import PacbotEnv
+
+model = PPO.load("./model")
+
+ACTION_NAMES = ["RIGHT", "LEFT", "UP", "DOWN"]
+ACTIONS = [Directions.RIGHT, Directions.LEFT, Directions.UP, Directions.DOWN]
 
 class DecisionModule:
 	'''
@@ -17,6 +24,7 @@ class DecisionModule:
 
 		# Game state object to store the game information
 		self.state = state
+		self.env = PacbotEnv(self.state)
 
 	async def decisionLoop(self) -> None:
 		'''
@@ -33,21 +41,37 @@ class DecisionModule:
 			'''
 
 			# If the current messages haven't been sent out yet, skip this iteration
-			if len(self.state.writeServerBuf):
+			if len(self.state.writeServerBuf) or not self.state.received_update:
 				await asyncio.sleep(0)
 				continue
+
+			# Wait for game state to (hopefully) be updated
+			await asyncio.sleep(0.15)
 
 			# Lock the game state
 			self.state.lock()
 
+			obs = self.env.get_observation()
+
+			action = await self.decide(obs)
+
 			# Write back to the server, as a test (move right)
-			self.state.queueAction(4, Directions.RIGHT)
+			self.state.queueAction(1, ACTIONS[action])
 
 			# Unlock the game state
 			self.state.unlock()
 
 			# Print that a decision has been made
-			print('decided')
+			print('decided', ACTION_NAMES[action])
 
 			# Free up the event loop
 			await asyncio.sleep(0)
+
+	async def decide(self, obs):
+		actions = []
+
+		for _ in range(10):
+			action, _ = model.predict(obs)
+			actions.append(int(action))
+
+		return max(set(actions), key=actions.count)
