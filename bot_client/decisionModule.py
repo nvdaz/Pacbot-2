@@ -53,7 +53,7 @@ class DecisionModule:
 
 			obs = self.env.get_observation()
 
-			action = await self.decide(obs)
+			action, _ = model.predict(obs, deterministic=True)
 
 			# Write back to the server, as a test (move right)
 			self.state.queueAction(1, ACTIONS[action])
@@ -66,12 +66,3 @@ class DecisionModule:
 
 			# Free up the event loop
 			await asyncio.sleep(0)
-
-	async def decide(self, obs):
-		actions = []
-
-		for _ in range(10):
-			action, _ = model.predict(obs)
-			actions.append(int(action))
-
-		return max(set(actions), key=actions.count)
